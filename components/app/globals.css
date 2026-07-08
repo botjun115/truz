@@ -1,0 +1,32 @@
+@import "../styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg font-sans text-ink antialiased;
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg;
+  }
+
+  .page-content {
+    @apply flex-1 px-5 pb-24;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-12 items-center justify-center rounded-control bg-ink px-6 text-sm font-semibold text-bg;
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-12 items-center justify-center rounded-control border border-line bg-surface px-6 text-sm font-semibold text-ink;
+  }
+}
