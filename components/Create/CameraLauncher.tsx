@@ -7,23 +7,24 @@ import { RecordingOverlay } from "@/components/Camera/RecordingOverlay";
 import { useCamera } from "@/hooks/useCamera";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useRecording } from "@/hooks/useRecording";
-import type { VideoAsset } from "@/types/video";
+import type { VideoAsset, VideoKind } from "@/types/video";
 
 export interface CameraLauncherProps {
+  kind: VideoKind;
   onRecorded: (video: VideoAsset) => void;
 }
 
 /**
  * フルスクリーンCamera制御:
  * カメラ起動 → 3・2・1カウントダウン → 自動で正確に3秒録画 → 完了で親へ受け渡し。
- * ユーザーはRecordを押さない。
+ * ユーザーはRecordを押さない。kindでSTART/ENDを切り替える。
  */
-export function CameraLauncher({ onRecorded }: CameraLauncherProps) {
+export function CameraLauncher({ kind, onRecorded }: CameraLauncherProps) {
   const camera = useCamera();
   const recording = useRecording();
 
   const countdown = useCountdown(3, () => {
-    if (camera.stream) recording.record(camera.stream);
+    if (camera.stream) recording.record(camera.stream, kind);
   });
 
   // カメラ起動

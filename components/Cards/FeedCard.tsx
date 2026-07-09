@@ -1,50 +1,65 @@
 "use client";
 
-import { Clock } from "lucide-react";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { SupportButtons } from "@/components/Buttons/SupportButtons";
 import { QuestDuration } from "@/components/Quest/QuestDuration";
-import { QuestStatus } from "@/components/Quest/QuestStatus";
 import { QuestTitle } from "@/components/Quest/QuestTitle";
-import { Timer } from "@/components/Timer/Timer";
+import { VerifiedBadge } from "@/components/Verified/VerifiedBadge";
+import { VideoPlaceholder } from "@/components/Video/VideoPlaceholder";
 import { VideoPlayer } from "@/components/Video/VideoPlayer";
+import { EASE } from "@/constants/animation";
 import type { FeedItem } from "@/types/feed";
+import type { SupportReactionType } from "@/types/reaction";
 import { formatDuration, formatTimeAgo } from "@/utils/time";
 
 export interface FeedCardProps {
   item: FeedItem;
+  index?: number;
   footer?: React.ReactNode;
-  onTapEnd?: () => void;
 }
 
-/** フィード1件分のカードレイアウト */
-export function FeedCard({ item, footer, onTapEnd }: FeedCardProps) {
+/** 完了済みクエスト1件分の2カラムカード(START左・END右) */
+export function FeedCard({ item, index = 0, footer }: FeedCardProps) {
   const { quest, author } = item;
-  const isActive = quest.status === "active";
+  const [reacted, setReacted] = useState<ReadonlySet<SupportReactionType>>(new Set());
+
+  const toggleReaction = (type: SupportReactionType) => {
+    setReacted((current) => {
+      const next = new Set(current);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  };
 
   return (
-    <article className="my-4 rounded-card border border-line bg-surface p-5 shadow-card">
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: EASE.out, delay: Math.min(index * 0.06, 0.3) }}
+      whileHover={{ y: -3 }}
+      className="my-4 will-change-transform rounded-card border border-line bg-surface p-5 shadow-card"
+    >
       <header className="flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 font-display text-lg font-bold text-ink">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 font-display text-lg font-bold text-ink ring-1 ring-white/[0.06]">
           {author.displayName.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-base font-bold text-ink">{author.displayName}</p>
+          <p className="truncate text-base font-bold text-ink">{author.displayName}</p>
           <p className="text-[13px] text-soft">{formatTimeAgo(item.createdAt)}</p>
         </div>
-        <QuestStatus status={quest.status} />
+        <VerifiedBadge />
       </header>
 
       <div className="mt-3.5">
         <QuestTitle title={quest.questName} />
       </div>
       <div className="mt-1.5">
-        {isActive ? (
-          <span className="inline-flex items-center gap-1.5">
-            <Clock size={14} className="text-soft" />
-            <Timer startTimestamp={quest.startTimestamp} />
-          </span>
-        ) : (
-          <QuestDuration label={formatDuration(quest.durationMs ?? 0)} />
-        )}
+        <QuestDuration label={formatDuration(quest.durationMs ?? 0)} />
       </div>
 
       <div className="mt-3.5 flex gap-3">
@@ -54,34 +69,30 @@ export function FeedCard({ item, footer, onTapEnd }: FeedCardProps) {
               src={quest.startVideo.uri}
               poster={quest.startVideo.posterUri ?? undefined}
             />
-          ) : null}
+          ) : (
+            <VideoPlaceholder />
+          )}
           <MediaBadge label="START • 3s" />
         </div>
         <div className="relative aspect-[9/16] flex-1 overflow-hidden rounded-media bg-surface-2">
           {quest.endVideo ? (
-            <>
-              <VideoPlayer
-                src={quest.endVideo.uri}
-                poster={quest.endVideo.posterUri ?? undefined}
-              />
-              <MediaBadge label="END • 3s" />
-            </>
-          ) : isActive ? (
-            <button
-              type="button"
-              onClick={onTapEnd}
-              className="flex h-full w-full items-center justify-center rounded-media border-2 border-dashed border-faint"
-            >
-              <span className="font-mono text-[11px] font-bold tracking-widest text-soft">
-                TAP TO END
-              </span>
-            </button>
-          ) : null}
+            <VideoPlayer
+              src={quest.endVideo.uri}
+              poster={quest.endVideo.posterUri ?? undefined}
+            />
+          ) : (
+            <VideoPlaceholder />
+          )}
+          <MediaBadge label="END • 3s" />
         </div>
       </div>
 
+      <div className="mt-4">
+        <SupportButtons activeTypes={[...reacted]} onReact={toggleReaction} />
+      </div>
+
       {footer ? <div className="mt-3.5">{footer}</div> : null}
-    </article>
+    </motion.article>
   );
 }
 

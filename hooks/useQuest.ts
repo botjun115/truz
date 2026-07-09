@@ -11,17 +11,23 @@ export interface PublishStartQuestInput {
   startVideo: VideoAsset;
 }
 
+export interface CompleteEndQuestInput {
+  questId: string;
+  endVideo: VideoAsset;
+}
+
 export interface UseQuestResult {
   quests: Quest[];
   publishStartQuest: (input: PublishStartQuestInput) => Quest;
+  completeEndQuest: (input: CompleteEndQuestInput) => void;
 }
 
 /**
- * START Questを公開用のQuestオブジェクトに組み立て、QuestContextへ追加する。
- * (Phase 2は擬似アップロードのため、ローカルのContextにのみ積む)
+ * START Questの公開(active化)と、END動画付与によるCOMPLETED化を担う。
+ * (Phase 2は擬似アップロードのため、ローカルのContextにのみ反映)
  */
 export function useQuest(): UseQuestResult {
-  const { quests, addQuest } = useQuestContext();
+  const { quests, addQuest, completeQuest } = useQuestContext();
 
   const publishStartQuest = useCallback(
     ({ questName, startVideo }: PublishStartQuestInput): Quest => {
@@ -42,5 +48,12 @@ export function useQuest(): UseQuestResult {
     [addQuest],
   );
 
-  return { quests, publishStartQuest };
+  const completeEndQuest = useCallback(
+    ({ questId, endVideo }: CompleteEndQuestInput) => {
+      completeQuest({ questId, endVideo });
+    },
+    [completeQuest],
+  );
+
+  return { quests, publishStartQuest, completeEndQuest };
 }

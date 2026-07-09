@@ -8,24 +8,33 @@ import { useQuest } from "@/hooks/useQuest";
 import type { VideoAsset } from "@/types/video";
 
 /**
- * START Questフローのオーバーレイ制御。
+ * START/ENDフローのオーバーレイ制御。
  * step に応じて Bottom Sheet / Camera / Review をHomeの上に重ねる。
+ * mode が "start" なら新規active化、"end" なら既存questをCOMPLETED化する。
  */
 export function CreateFlow() {
   const flow = useCreateQuest();
-  const { publishStartQuest } = useQuest();
+  const { publishStartQuest, completeEndQuest } = useQuest();
 
   const handleRecorded = (video: VideoAsset) => flow.completeRecording(video);
 
   const handlePost = () => {
-    if (!flow.startVideo) return;
-    const questName = flow.questName.trim();
-    const video = flow.startVideo;
-    // 擬似アップロード(ローディングはPostButton側で表示)
-    window.setTimeout(() => {
-      publishStartQuest({ questName, startVideo: video });
-      flow.reset();
-    }, 1200);
+    if (!flow.recordedVideo) return;
+    const video = flow.recordedVideo;
+
+    if (flow.mode === "start") {
+      const questName = flow.questName.trim();
+      window.setTimeout(() => {
+        publishStartQuest({ questName, startVideo: video });
+        flow.reset();
+      }, 1200);
+    } else if (flow.mode === "end" && flow.endingQuestId) {
+      const questId = flow.endingQuestId;
+      window.setTimeout(() => {
+        completeEndQuest({ questId, endVideo: video });
+        flow.reset();
+      }, 1200);
+    }
   };
 
   return (
@@ -38,13 +47,15 @@ export function CreateFlow() {
         onClose={flow.close}
       />
 
-      {flow.step === "camera" ? <CameraLauncher onRecorded={handleRecorded} /> : null}
+      {flow.step === "camera" ? (
+        <CameraLauncher kind={flow.mode} onRecorded={handleRecorded} />
+      ) : null}
 
-      {flow.step === "review" && flow.startVideo ? (
+      {flow.step === "review" && flow.recordedVideo ? (
         <div className="fixed inset-0 z-50 mx-auto max-w-md">
           <ReviewScreen
             questName={flow.questName.trim()}
-            video={flow.startVideo}
+            video={flow.recordedVideo}
             onBack={flow.backToCamera}
             onPost={handlePost}
           />

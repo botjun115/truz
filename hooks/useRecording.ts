@@ -2,7 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { RECORD_DURATION_MS } from "@/constants/config";
-import type { VideoAsset } from "@/types/video";
+import type { VideoAsset, VideoKind } from "@/types/video";
+import { blobToDataUrl } from "@/utils/blob";
 import { generateId } from "@/utils/id";
 
 export type RecordingStatus = "idle" | "recording" | "processing" | "done" | "error";
@@ -11,7 +12,7 @@ export interface UseRecordingResult {
   status: RecordingStatus;
   result: VideoAsset | null;
   error: string | null;
-  record: (stream: MediaStream) => void;
+  record: (stream: MediaStream, kind: VideoKind) => void;
   reset: () => void;
 }
 
@@ -25,7 +26,10 @@ function pickMimeType(): string {
   return "";
 }
 
-/** ストリームを正確に RECORD_DURATION_MS だけ録画し、VideoAsset を生成する */
+/**
+ * ストリームを正確に RECORD_DURATION_MS だけ録画し、VideoAsset を生成する。
+ * uri は data URL にする(localStorage永続化後、リロードしても再生できるように)。
+ */
 export function useRecording(): UseRecordingResult {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [result, setResult] = useState<VideoAsset | null>(null);
@@ -39,7 +43,7 @@ export function useRecording(): UseRecordingResult {
     recorderRef.current = null;
   }, []);
 
-  const record = useCallback((stream: MediaStream) => {
+  const record = useCallback((stream: MediaStream, kind: VideoKind) => {
     setError(null);
     setResult(null);
     const chunks: BlobPart[] = [];
@@ -60,19 +64,25 @@ export function useRecording(): UseRecordingResult {
     recorder.onstop = () => {
       setStatus("processing");
       const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
-      const uri = URL.createObjectURL(blob);
-      const asset: VideoAsset = {
-        id: generateId("vid"),
-        kind: "start",
-        uri,
-        posterUri: null,
-        durationMs: RECORD_DURATION_MS,
-        width: null,
-        height: null,
-        createdAt: Date.now(),
-      };
-      setResult(asset);
-      setStatus("done");
+      blobToDataUrl(blob)
+        .then((dataUrl) => {
+          const asset: VideoAsset = {
+            id: generateId("vid"),
+            kind,
+            uri: dataUrl,
+            posterUri: null,
+            durationMs: RECORD_DURATION_MS,
+            width: null,
+            height: null,
+            createdAt: Date.now(),
+          };
+          setResult(asset);
+          setStatus("done");
+        })
+        .catch(() => {
+          setStatus("error");
+          setError("録画データの保存に失敗しました。");
+        });
     };
 
     setStatus("recording");
