@@ -21,7 +21,33 @@ export function CreateFlow() {
   const handlePost = () => {
     if (!flow.recordedVideo) return;
     const video = flow.recordedVideo;
-
+    const handlePost = () => {
+      if (!flow.recordedVideo) {
+        console.error("[TRUZ] handlePost: recordedVideo is null — 録画結果が渡っていない");
+        return;
+      }
+      const video = flow.recordedVideo;
+      console.log("[TRUZ] posting video:", {
+        mode: flow.mode,
+        hasUri: !!video.uri,
+        uriPrefix: video.uri ? video.uri.slice(0, 30) : "(none)",
+        uriLength: video.uri ? video.uri.length : 0,
+      });
+  
+      if (flow.mode === "start") {
+        const questName = flow.questName.trim();
+        window.setTimeout(() => {
+          publishStartQuest({ questName, startVideo: video });
+          flow.reset();
+        }, 1200);
+      } else if (flow.mode === "end" && flow.endingQuestId) {
+        const questId = flow.endingQuestId;
+        window.setTimeout(() => {
+          completeEndQuest({ questId, endVideo: video });
+          flow.reset();
+        }, 1200);
+      }
+    };
     if (flow.mode === "start") {
       const questName = flow.questName.trim();
       window.setTimeout(() => {

@@ -19,7 +19,7 @@ export function CameraView({ videoRef, status, error, children }: CameraViewProp
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 h-full w-full object-cover ${
+        className={`absolute inset-0 h-full w-full object-contain ${
           status === "live" ? "block" : "hidden"
         }`}
       />

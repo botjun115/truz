@@ -24,14 +24,20 @@ export function ReviewScreen({ questName, video, onBack, onPost }: ReviewScreenP
   return (
     <div className="flex h-full w-full flex-col bg-bg">
       <header className="flex items-center gap-2 px-5 pt-4">
-        <button type="button" onClick={onBack} aria-label="Back" disabled={isPosting} className="-ml-2 p-2 text-ink">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back"
+          disabled={isPosting}
+          className="-ml-2 p-2 text-ink"
+        >
           <ChevronLeft size={22} />
         </button>
         <h1 className="font-display text-lg font-semibold text-ink">Review</h1>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 px-5 pb-6 pt-2">
-        <div className="relative flex-1 overflow-hidden rounded-media bg-surface-2">
+        <div className="relative flex-1 overflow-hidden rounded-media bg-black">
           <video
             src={video.uri}
             poster={video.posterUri ?? undefined}
@@ -39,7 +45,7 @@ export function ReviewScreen({ questName, video, onBack, onPost }: ReviewScreenP
             autoPlay
             loop
             playsInline
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
           />
         </div>
         <p className="font-sans text-xl font-bold text-ink">{questName}</p>
