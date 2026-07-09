@@ -26,10 +26,6 @@ function pickMimeType(): string {
   return "";
 }
 
-/**
- * ストリームを正確に RECORD_DURATION_MS だけ録画し、VideoAsset を生成する。
- * uri は data URL にする(localStorage永続化後、リロードしても再生できるように)。
- */
 export function useRecording(): UseRecordingResult {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [result, setResult] = useState<VideoAsset | null>(null);
@@ -50,8 +46,10 @@ export function useRecording(): UseRecordingResult {
     let recorder: MediaRecorder;
     try {
       const mimeType = pickMimeType();
+      console.log("[TRUZ] MediaRecorder mimeType:", mimeType || "(default)");
       recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    } catch {
+    } catch (e) {
+      console.error("[TRUZ] MediaRecorder init failed:", e);
       setStatus("error");
       setError("録画を開始できませんでした。");
       return;
@@ -59,13 +57,33 @@ export function useRecording(): UseRecordingResult {
     recorderRef.current = recorder;
 
     recorder.ondataavailable = (event: BlobEvent) => {
+      console.log("[TRUZ] ondataavailable chunk size:", event.data.size);
       if (event.data.size > 0) chunks.push(event.data);
     };
+
     recorder.onstop = () => {
       setStatus("processing");
       const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+      console.log("[TRUZ] === recording stopped ===");
+      console.log("[TRUZ] blob size:", blob.size);
+      console.log("[TRUZ] blob type:", blob.type);
+      console.log("[TRUZ] chunks count:", chunks.length);
+
+      if (blob.size === 0) {
+        console.error("[TRUZ] BLOB IS EMPTY — 録画データが空です");
+        setStatus("error");
+        setError("録画データが空でした。");
+        return;
+      }
+
+      // 参考: object URLも作ってログ(実保存はdata URL)
+      const objUrl = URL.createObjectURL(blob);
+      console.log("[TRUZ] object URL:", objUrl);
+
       blobToDataUrl(blob)
         .then((dataUrl) => {
+          console.log("[TRUZ] data URL length:", dataUrl.length);
+          console.log("[TRUZ] data URL prefix:", dataUrl.slice(0, 40));
           const asset: VideoAsset = {
             id: generateId("vid"),
             kind,
@@ -76,10 +94,12 @@ export function useRecording(): UseRecordingResult {
             height: null,
             createdAt: Date.now(),
           };
+          console.log("[TRUZ] VideoAsset created, uri length:", asset.uri.length);
           setResult(asset);
           setStatus("done");
         })
-        .catch(() => {
+        .catch((e) => {
+          console.error("[TRUZ] blobToDataUrl failed:", e);
           setStatus("error");
           setError("録画データの保存に失敗しました。");
         });
@@ -87,7 +107,9 @@ export function useRecording(): UseRecordingResult {
 
     setStatus("recording");
     recorder.start();
+    console.log("[TRUZ] recorder.start() called, state:", recorder.state);
     window.setTimeout(() => {
+      console.log("[TRUZ] 3s timeout, recorder.state:", recorder.state);
       if (recorder.state !== "inactive") recorder.stop();
     }, RECORD_DURATION_MS);
   }, []);

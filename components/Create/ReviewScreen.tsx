@@ -15,7 +15,7 @@ export interface ReviewScreenProps {
 /** 録画レビュー: 動画(再生可)・クエスト名・戻る・投稿。トリミングや加工は無し */
 export function ReviewScreen({ questName, video, onBack, onPost }: ReviewScreenProps) {
   const [isPosting, setIsPosting] = useState(false);
-
+  console.log("[TRUZ] ReviewScreen video.uri length:", video.uri?.length ?? "undefined");
   const handlePost = () => {
     setIsPosting(true);
     onPost();

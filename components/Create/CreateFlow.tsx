@@ -16,42 +16,29 @@ export function CreateFlow() {
   const flow = useCreateQuest();
   const { publishStartQuest, completeEndQuest } = useQuest();
 
-  const handleRecorded = (video: VideoAsset) => flow.completeRecording(video);
+  const handleRecorded = (video: VideoAsset) => {
+    console.log("[TRUZ] CreateFlow.handleRecorded uri length:", video.uri?.length ?? "undefined");
+    flow.completeRecording(video);
+  };
 
   const handlePost = () => {
-    if (!flow.recordedVideo) return;
+    if (!flow.recordedVideo) {
+      console.error("[TRUZ] handlePost: recordedVideo is NULL");
+      return;
+    }
     const video = flow.recordedVideo;
-    const handlePost = () => {
-      if (!flow.recordedVideo) {
-        console.error("[TRUZ] handlePost: recordedVideo is null — 録画結果が渡っていない");
-        return;
-      }
-      const video = flow.recordedVideo;
-      console.log("[TRUZ] posting video:", {
-        mode: flow.mode,
-        hasUri: !!video.uri,
-        uriPrefix: video.uri ? video.uri.slice(0, 30) : "(none)",
-        uriLength: video.uri ? video.uri.length : 0,
-      });
-  
-      if (flow.mode === "start") {
-        const questName = flow.questName.trim();
-        window.setTimeout(() => {
-          publishStartQuest({ questName, startVideo: video });
-          flow.reset();
-        }, 1200);
-      } else if (flow.mode === "end" && flow.endingQuestId) {
-        const questId = flow.endingQuestId;
-        window.setTimeout(() => {
-          completeEndQuest({ questId, endVideo: video });
-          flow.reset();
-        }, 1200);
-      }
-    };
+    console.log(
+      "[TRUZ] handlePost posting, mode:",
+      flow.mode,
+      "uri length:",
+      video.uri?.length ?? "undefined",
+    );
+
     if (flow.mode === "start") {
       const questName = flow.questName.trim();
       window.setTimeout(() => {
         publishStartQuest({ questName, startVideo: video });
+        console.log("[TRUZ] publishStartQuest done, startVideo uri length:", video.uri?.length);
         flow.reset();
       }, 1200);
     } else if (flow.mode === "end" && flow.endingQuestId) {
