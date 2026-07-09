@@ -4,6 +4,7 @@ export interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  objectPosition?: string;
 }
 
 /**
@@ -11,7 +12,7 @@ export interface VideoPlayerProps {
  * 親が 9:16 の枠(overflow-hidden + rounded)を持つ前提で全面を cover で埋める。
  * srcがある限り黒プレースホルダーは出さない(必ず<video>を描画)。
  */
-export function VideoPlayer({ src, poster, className = "" }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, className = "", objectPosition }: VideoPlayerProps) {
   if (!src) {
     if (process.env.NODE_ENV !== "production") {
       return (
@@ -32,7 +33,7 @@ export function VideoPlayer({ src, poster, className = "" }: VideoPlayerProps) {
       playsInline
       preload="metadata"
       className={`h-full w-full bg-black object-cover ${className}`}
-      style={{ borderRadius: "inherit" }}
+      style={{ borderRadius: "inherit", ...(objectPosition ? { objectPosition } : {}) }}
     />
   );
 }
