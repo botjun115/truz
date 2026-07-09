@@ -74,7 +74,7 @@ export function CreateFlow() {
       />
 
       {flow.step === "camera" ? (
-        <CameraLauncher kind={flow.mode} onRecorded={handleRecorded} />
+        <CameraLauncher kind={flow.mode} onRecorded={handleRecorded} onClose={flow.close} />
       ) : null}
 
       {flow.step === "review" && flow.recordedVideo ? (

@@ -10,16 +10,19 @@ export interface CameraViewProps {
   children?: React.ReactNode;
 }
 
-/** フルスクリーンのカメラプレビュー面(オーバーレイをchildrenで重ねる) */
+/**
+ * ポートレート(9:16)のカメラプレビュー面。
+ * object-coverで縦長の携帯型エリアを埋める。オーバーレイはchildrenで重ねる。
+ */
 export function CameraView({ videoRef, status, error, children }: CameraViewProps) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
+    <div className="relative aspect-[9/16] w-full max-h-full overflow-hidden bg-black">
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 h-full w-full object-contain ${
+        className={`absolute inset-0 h-full w-full object-cover ${
           status === "live" ? "block" : "hidden"
         }`}
       />

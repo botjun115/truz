@@ -4,13 +4,22 @@ export interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
-  objectPosition?: string;
 }
 
-/** ループ・ミュート・コントロールなしの提示用プレイヤー */
-export function VideoPlayer({ src, poster, className = "", objectPosition }: VideoPlayerProps) {
+/**
+ * 再利用可能なポートレート動画プレイヤー。
+ * 親が 9:16 の枠(overflow-hidden + rounded)を持つ前提で全面を cover で埋める。
+ * srcがある限り黒プレースホルダーは出さない(必ず<video>を描画)。
+ */
+export function VideoPlayer({ src, poster, className = "" }: VideoPlayerProps) {
   if (!src) {
-    console.error("[TRUZ] VideoPlayer: src is empty");
+    if (process.env.NODE_ENV !== "production") {
+      return (
+        <div className="flex h-full w-full items-center justify-center bg-black text-center font-mono text-[10px] text-danger">
+          NO VIDEO URL
+        </div>
+      );
+    }
     return null;
   }
   return (
@@ -18,15 +27,12 @@ export function VideoPlayer({ src, poster, className = "", objectPosition }: Vid
       src={src}
       poster={poster}
       autoPlay
-      loop
       muted
+      loop
       playsInline
-      controls={false}
-      className={`h-full w-full rounded-media object-cover ${className}`}
-      style={objectPosition ? { objectPosition } : undefined}
-      onError={(e) => {
-        console.error("[TRUZ] VideoPlayer failed to load:", src.slice(0, 40), e);
-      }}
+      preload="metadata"
+      className={`h-full w-full bg-black object-cover ${className}`}
+      style={{ borderRadius: "inherit" }}
     />
   );
 }

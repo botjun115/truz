@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { CameraControls } from "@/components/Camera/CameraControls";
 import { CameraView } from "@/components/Camera/CameraView";
 import { Countdown } from "@/components/Camera/Countdown";
 import { RecordingOverlay } from "@/components/Camera/RecordingOverlay";
@@ -12,14 +13,15 @@ import type { VideoAsset, VideoKind } from "@/types/video";
 export interface CameraLauncherProps {
   kind: VideoKind;
   onRecorded: (video: VideoAsset) => void;
+  onClose: () => void;
 }
 
 /**
- * フルスクリーンCamera制御:
- * カメラ起動 → 3・2・1カウントダウン → 自動で正確に3秒録画 → 完了で親へ受け渡し。
- * ユーザーはRecordを押さない。kindでSTART/ENDを切り替える。
+ * フルスクリーン(ポートレート)Camera制御:
+ * 録画ボタンで 3・2・1 カウントダウン → 自動で正確に3秒録画 → 自動停止 → 完了で親へ。
+ * カメラ切替(前面/背面)と閉じるに対応。
  */
-export function CameraLauncher({ kind, onRecorded }: CameraLauncherProps) {
+export function CameraLauncher({ kind, onRecorded, onClose }: CameraLauncherProps) {
   const camera = useCamera();
   const recording = useRecording();
 
@@ -27,19 +29,11 @@ export function CameraLauncher({ kind, onRecorded }: CameraLauncherProps) {
     if (camera.stream) recording.record(camera.stream, kind);
   });
 
-  // カメラ起動
+  // 初回カメラ起動(前面)
   useEffect(() => {
-    camera.start();
+    camera.start("user");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ライブになったらカウントダウン開始
-  useEffect(() => {
-    if (camera.status === "live" && !countdown.isRunning && countdown.count === 3) {
-      countdown.start();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [camera.status]);
 
   // 録画完了 → 停止して親へ
   useEffect(() => {
@@ -50,14 +44,22 @@ export function CameraLauncher({ kind, onRecorded }: CameraLauncherProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recording.status, recording.result]);
 
-  const showCountdown = camera.status === "live" && countdown.isRunning;
+  const isBusy = countdown.isRunning || recording.status === "recording";
+  const showCountdown = countdown.isRunning;
   const showRecording = recording.status === "recording";
 
   return (
-    <div className="fixed inset-0 z-50 mx-auto max-w-md bg-black">
+    <div className="fixed inset-0 z-50 mx-auto flex max-w-md items-center justify-center bg-black">
       <CameraView videoRef={camera.videoRef} status={camera.status} error={camera.error}>
         <Countdown count={countdown.count} visible={showCountdown} />
         <RecordingOverlay visible={showRecording} />
+        <CameraControls
+          canRecord={camera.status === "live"}
+          isRecording={isBusy}
+          onRecord={countdown.start}
+          onFlip={camera.flip}
+          onClose={onClose}
+        />
       </CameraView>
     </div>
   );
