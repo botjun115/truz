@@ -4,7 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type CameraStatus = "idle" | "starting" | "live" | "error";
 export type FacingMode = "user" | "environment";
+type VideoTrackCapabilitiesWithZoom = MediaTrackCapabilities & {
+  zoom?: {
+    min: number;
+    max: number;
+    step: number;
+  };
+};
 
+type VideoTrackConstraintsWithZoom = MediaTrackConstraintSet & {
+  zoom?: number;
+};
 export interface UseCameraResult {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   stream: MediaStream | null;
@@ -58,6 +68,24 @@ export function useCamera(): UseCameraResult {
           audio: true,
         });
         streamRef.current = media;
+        const [videoTrack] = media.getVideoTracks();
+        const capabilities =
+        videoTrack.getCapabilities?.() as VideoTrackCapabilitiesWithZoom | undefined;
+      
+      if (capabilities?.zoom) {
+        const zoomValue = Math.min(
+          capabilities.zoom.max,
+          Math.max(capabilities.zoom.min, 1),
+        );
+      
+        await videoTrack.applyConstraints({
+          advanced: [
+            {
+              zoom: zoomValue,
+            } as VideoTrackConstraintsWithZoom,
+          ],
+        });
+      }
         setStream(media);
         setFacingMode(facing);
         if (videoRef.current) {
