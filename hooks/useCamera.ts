@@ -67,25 +67,30 @@ export function useCamera(): UseCameraResult {
           },
           audio: true,
         });
-        streamRef.current = media;
         const [videoTrack] = media.getVideoTracks();
-        const capabilities =
-        videoTrack.getCapabilities?.() as VideoTrackCapabilitiesWithZoom | undefined;
-      
-      if (capabilities?.zoom) {
-        const zoomValue = Math.min(
-          capabilities.zoom.max,
-          Math.max(capabilities.zoom.min, 1),
-        );
-      
-        await videoTrack.applyConstraints({
-          advanced: [
-            {
-              zoom: zoomValue,
-            } as VideoTrackConstraintsWithZoom,
-          ],
-        });
-      }
+
+if (videoTrack?.getCapabilities) {
+  const capabilities =
+    videoTrack.getCapabilities() as VideoTrackCapabilitiesWithZoom;
+
+  if (capabilities.zoom) {
+    try {
+      await videoTrack.applyConstraints({
+        advanced: [
+          {
+            zoom: capabilities.zoom.min,
+          } as VideoTrackConstraintsWithZoom,
+        ],
+      });
+
+      console.log("[TRUZ] Camera zoom:", capabilities.zoom.min);
+    } catch (zoomError) {
+      console.warn("[TRUZ] Minimum zoom could not be applied:", zoomError);
+    }
+  }
+}
+        streamRef.current = media;
+
         setStream(media);
         setFacingMode(facing);
         if (videoRef.current) {
