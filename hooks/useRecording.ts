@@ -45,9 +45,12 @@ export function useRecording(): UseRecordingResult {
     const chunks: Blob[] = [];
     let recorder: MediaRecorder;
     try {
-      const mimeType = pickMimeType();
-      console.log("[TRUZ] MediaRecorder mimeType:", mimeType || "(default)");
-      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorder = new MediaRecorder(stream);
+
+console.log(
+  "[TRUZ] Browser selected MediaRecorder mimeType:",
+  recorder.mimeType || "(default)",
+);
     } catch (e) {
       console.error("[TRUZ] MediaRecorder init failed:", e);
       setStatus("error");
@@ -102,7 +105,7 @@ chunks.forEach((chunk, index) => {
           const asset: VideoAsset = {
             id: generateId("vid"),
             kind,
-            uri: dataUrl,
+            uri: objUrl,
             posterUri: null,
             durationMs: RECORD_DURATION_MS,
             width: null,
