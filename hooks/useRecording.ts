@@ -106,7 +106,7 @@ export function useRecording(): UseRecordingResult {
             PORTRAIT_HEIGHT / sourceHeight,
           );
           
-          const scale = coverScale * 0.72;
+          const scale = coverScale * 0.62;
 
           const drawWidth = sourceWidth * scale;
           const drawHeight = sourceHeight * scale;
