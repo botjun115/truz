@@ -42,7 +42,7 @@ export function useRecording(): UseRecordingResult {
   const record = useCallback((stream: MediaStream, kind: VideoKind) => {
     setError(null);
     setResult(null);
-    const chunks: BlobPart[] = [];
+    const chunks: Blob[] = [];
     let recorder: MediaRecorder;
     try {
       const mimeType = pickMimeType();
@@ -63,7 +63,22 @@ export function useRecording(): UseRecordingResult {
 
     recorder.onstop = () => {
       setStatus("processing");
-      const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+      const actualMimeType =
+  recorder.mimeType ||
+  chunks.find((chunk) => chunk.type)?.type
+  "video/mp4";
+
+const blob = new Blob(chunks, {
+  type: actualMimeType,
+});
+      console.log("Recorder MIME:", recorder.mimeType);
+
+chunks.forEach((chunk, index) => {
+  console.log(`Chunk ${index}:`, {
+    size: chunk.size,
+    type: chunk.type,
+  });
+});
       console.log("[TRUZ] === recording stopped ===");
       console.log("[TRUZ] blob size:", blob.size);
       console.log("[TRUZ] blob type:", blob.type);
