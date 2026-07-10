@@ -101,7 +101,7 @@ export function useRecording(): UseRecordingResult {
            * 横動画を無理に拡大・クロップせず、
            * 720×1280の縦動画内へ全体を収める。
            */
-          const scale = Math.min(
+          const scale = Math.max(
             PORTRAIT_WIDTH / sourceWidth,
             PORTRAIT_HEIGHT / sourceHeight,
           );
