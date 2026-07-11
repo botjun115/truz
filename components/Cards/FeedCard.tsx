@@ -1,39 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { SupportButtons } from "@/components/Buttons/SupportButtons";
-import { QuestDuration } from "@/components/Quest/QuestDuration";
-import { QuestTitle } from "@/components/Quest/QuestTitle";
-import { VerifiedBadge } from "@/components/Verified/VerifiedBadge";
+import { Clock, Heart, MessageCircle } from "lucide-react";
+import { CommentSection, type FeedComment } from "@/components/Feed/CommentSection";
+import { QuestStatus } from "@/components/Quest/QuestStatus";
+import { Timer } from "@/components/Timer/Timer";
 import { VideoPlaceholder } from "@/components/Video/VideoPlaceholder";
 import { VideoPlayer } from "@/components/Video/VideoPlayer";
 import { EASE } from "@/constants/animation";
 import type { FeedItem } from "@/types/feed";
-import type { SupportReactionType } from "@/types/reaction";
 import { formatDuration, formatTimeAgo } from "@/utils/time";
+import { generateId } from "@/utils/id";
 
 export interface FeedCardProps {
   item: FeedItem;
   index?: number;
   footer?: React.ReactNode;
+  onTapEnd?: () => void;
 }
 
-/** 完了済みクエスト1件分の2カラムカード(START左・END右) */
-export function FeedCard({ item, index = 0, footer }: FeedCardProps) {
+/** フィード1件分の投稿レイアウト(Instagram風) */
+export function FeedCard({ item, index = 0, footer, onTapEnd }: FeedCardProps) {
   const { quest, author } = item;
-  const [reacted, setReacted] = useState<ReadonlySet<SupportReactionType>>(new Set());
+  const isActive = quest.status === "active";
 
-  const toggleReaction = (type: SupportReactionType) => {
-    setReacted((current) => {
-      const next = new Set(current);
-      if (next.has(type)) {
-        next.delete(type);
-      } else {
-        next.add(type);
-      }
-      return next;
+  // likes/commentsはFeedItemに無いため安全な初期値をローカルstateで持つ(Firebase未接続)
+  const initialLikes = useMemo(
+    () => item.reactions.reduce((sum, reaction) => sum + reaction.count, 0),
+    [item.reactions],
+  );
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(initialLikes);
+  const [comments, setComments] = useState<FeedComment[]>([]);
+  const [showComments, setShowComments] = useState(false);
+
+  const toggleLike = () => {
+    setLiked((prev) => {
+      setLikeCount((count) => Math.max(0, prev ? count - 1 : count + 1));
+      return !prev;
     });
+  };
+
+  const addComment = (body: string) => {
+    setComments((current) => [
+      ...current,
+      { id: generateId("comment"), author: author.displayName, body },
+    ]);
   };
 
   return (
@@ -41,34 +54,34 @@ export function FeedCard({ item, index = 0, footer }: FeedCardProps) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: EASE.out, delay: Math.min(index * 0.06, 0.3) }}
-      whileHover={{ y: -3 }}
-      className="my-4 will-change-transform rounded-card border border-line bg-surface p-5 shadow-card"
+      className="border-b border-line py-4"
     >
+      {/* 1. ヘッダー */}
       <header className="flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 font-display text-lg font-bold text-ink ring-1 ring-white/[0.06]">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 font-display text-base font-bold text-ink ring-1 ring-white/[0.06]">
           {author.displayName.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold text-ink">{author.displayName}</p>
-          <p className="text-[13px] text-soft">{formatTimeAgo(item.createdAt)}</p>
+          <p className="truncate text-sm font-bold text-ink">{author.displayName}</p>
+          <p className="text-[12px] text-soft">{formatTimeAgo(item.createdAt)}</p>
         </div>
-        <VerifiedBadge />
+        {isActive ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Clock size={14} className="text-soft" />
+            <Timer startTimestamp={quest.startTimestamp} />
+          </span>
+        ) : (
+          <span className="font-mono text-xs font-semibold text-soft">
+            {formatDuration(quest.durationMs ?? 0)}
+          </span>
+        )}
       </header>
 
-      <div className="mt-3.5">
-        <QuestTitle title={quest.questName} />
-      </div>
-      <div className="mt-1.5">
-        <QuestDuration label={formatDuration(quest.durationMs ?? 0)} />
-      </div>
-
-      <div className="mt-3.5 flex gap-3">
+      {/* 2. 動画(START / END 横並び・同幅同高・縦比維持) */}
+      <div className="mt-3 flex gap-2">
         <div className="relative aspect-[9/16] flex-1 overflow-hidden rounded-media bg-surface-2">
           {quest.startVideo ? (
-            <VideoPlayer
-              src={quest.startVideo.uri}
-              poster={quest.startVideo.posterUri ?? undefined}
-            />
+            <VideoPlayer src={quest.startVideo.uri} poster={quest.startVideo.posterUri ?? undefined} />
           ) : (
             <VideoPlaceholder />
           )}
@@ -76,22 +89,76 @@ export function FeedCard({ item, index = 0, footer }: FeedCardProps) {
         </div>
         <div className="relative aspect-[9/16] flex-1 overflow-hidden rounded-media bg-surface-2">
           {quest.endVideo ? (
-            <VideoPlayer
-              src={quest.endVideo.uri}
-              poster={quest.endVideo.posterUri ?? undefined}
-            />
+            <>
+              <VideoPlayer src={quest.endVideo.uri} poster={quest.endVideo.posterUri ?? undefined} />
+              <MediaBadge label="END • 3s" />
+            </>
+          ) : isActive ? (
+            <button
+              type="button"
+              onClick={onTapEnd}
+              className="flex h-full w-full items-center justify-center rounded-media border-2 border-dashed border-faint"
+            >
+              <span className="font-mono text-[11px] font-bold tracking-widest text-soft">
+                TAP TO END
+              </span>
+            </button>
           ) : (
-            <VideoPlaceholder />
+            <>
+              <VideoPlaceholder />
+              <MediaBadge label="END • 3s" />
+            </>
           )}
-          <MediaBadge label="END • 3s" />
         </div>
       </div>
 
-      <div className="mt-4">
-        <SupportButtons activeTypes={[...reacted]} onReact={toggleReaction} />
+      {/* 4. リアクション(ハート / コメント) */}
+      <div className="mt-3 flex items-center gap-5">
+        <button
+          type="button"
+          onClick={toggleLike}
+          aria-pressed={liked}
+          aria-label="Like"
+          className="flex items-center gap-1.5"
+        >
+          <motion.span whileTap={{ scale: 0.8 }} className="inline-flex">
+            <Heart
+              size={22}
+              className={liked ? "text-[#ff2d78]" : "text-soft"}
+              fill={liked ? "#ff2d78" : "none"}
+            />
+          </motion.span>
+          <span className="text-sm font-semibold text-ink">{likeCount}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowComments((prev) => !prev)}
+          aria-label="Comments"
+          className="flex items-center gap-1.5"
+        >
+          <MessageCircle size={22} className="text-soft" />
+          <span className="text-sm font-semibold text-ink">{comments.length}</span>
+        </button>
       </div>
 
-      {footer ? <div className="mt-3.5">{footer}</div> : null}
+      {/* 3. クエストテキスト(投稿本文として) */}
+      <p className="mt-2 text-sm text-ink">
+        <span className="font-semibold">{author.displayName}</span>{" "}
+        <span className="text-soft">{quest.questName}</span>
+      </p>
+
+      {/* コメント展開 */}
+      {showComments ? (
+        <CommentSection
+          comments={comments}
+          onAddComment={addComment}
+          currentUserName={author.displayName}
+        />
+      ) : null}
+
+      {isActive ? <div className="mt-2">{<QuestStatus status="active" />}</div> : null}
+
+      {footer ? <div className="mt-3">{footer}</div> : null}
     </motion.article>
   );
 }
