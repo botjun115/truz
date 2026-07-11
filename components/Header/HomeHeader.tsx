@@ -28,7 +28,7 @@ export function HomeHeader({ tab, onTabChange }: HomeHeaderProps) {
             aria-label="Open profile"
             className="shrink-0"
           >
-            <ProfileAvatar name={profile.name} avatarDataUrl={profile.avatarDataUrl} size={32} />
+            <ProfileAvatar name={profile.name} avatarDataUrl={profile.avatarDataUrl} size={38} />
           </button>
           <p className="font-sans text-[28px] font-bold leading-none tracking-[2px] text-ink">
             {APP_NAME} <span className="text-accent">•</span>
