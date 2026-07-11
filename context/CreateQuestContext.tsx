@@ -68,7 +68,10 @@ export function CreateQuestProvider({ children }: { children: React.ReactNode })
     setRecordedVideo(null);
     setStep("camera");
   }, []);
+  const beginPosting = useCallback(() => setStep("posting"), []);
 
+  /** 投稿成功。成功画面(Share/Done)を表示する。previewUrlはフィードが使うため破棄しない */
+  const succeed = useCallback(() => setStep("success"), []);
   const value = useMemo<CreateQuestContextValue>(
     () => ({
       step,
