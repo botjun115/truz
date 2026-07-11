@@ -122,7 +122,9 @@ export function useRecording(): UseRecordingResult {
 
         animationFrameRef.current = requestAnimationFrame(drawFrame);
       };
-
+      const videoTrack = stream.getVideoTracks()[0];
+      const trackSettings = videoTrack?.getSettings();
+      const isFrontCamera = trackSettings?.facingMode === "user";
       drawFrame();
 
       const canvasStream = canvas.captureStream(FRAME_RATE);
