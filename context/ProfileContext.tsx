@@ -1,13 +1,13 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { Profile } from "@/types/profile";
+import type { UserProfile } from "@/types/profile";
 import { notImplemented } from "@/utils/errors";
 
 export type ProfileStatus = "idle" | "loading" | "ready" | "error";
 
 interface ProfileContextValue {
-  profile: Profile | null;
+  profile: UserProfile | null;
   status: ProfileStatus;
   refresh: () => Promise<void>;
 }
@@ -15,7 +15,7 @@ interface ProfileContextValue {
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const [profile] = useState<Profile | null>(null);
+  const [profile] = useState<UserProfile | null>(null);
   const [status] = useState<ProfileStatus>("idle");
 
   const refresh = useCallback(async () => notImplemented("ProfileContext.refresh"), []);
