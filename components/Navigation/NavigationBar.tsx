@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Bell, Home, Search, User, type LucideIcon } from "lucide-react";
 import { FloatingButton } from "@/components/Buttons/FloatingButton";
 import { useCreateQuest } from "@/context/CreateQuestContext";
@@ -23,11 +22,20 @@ const RIGHT_TABS: readonly NavTab[] = [
   { href: ROUTES.profile, label: "Profile", icon: User },
 ];
 
-function NavLink({ tab, active }: { tab: NavTab; active: boolean }) {
+function NavLink({
+  tab,
+  active,
+  onNavigate,
+}: {
+  tab: NavTab;
+  active: boolean;
+  onNavigate: (href: string) => void;
+}) {
   const Icon = tab.icon;
   return (
-    <Link
-      href={tab.href}
+    <button
+      type="button"
+      onClick={() => onNavigate(tab.href)}
       aria-label={tab.label}
       aria-current={active ? "page" : undefined}
       className={`flex min-h-11 min-w-11 items-center justify-center transition-colors ${
@@ -35,23 +43,26 @@ function NavLink({ tab, active }: { tab: NavTab; active: boolean }) {
       }`}
     >
       <Icon size={20} strokeWidth={active ? 2.3 : 1.8} />
-    </Link>
+    </button>
   );
 }
 
 export function NavigationBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { openSheet } = useCreateQuest();
+
+  const navigate = (href: string) => router.push(href);
 
   return (
     <nav className="sticky bottom-0 z-20 border-t border-line bg-surface/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-md items-center justify-around px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-2">
         {LEFT_TABS.map((tab) => (
-          <NavLink key={tab.href} tab={tab} active={pathname === tab.href} />
+          <NavLink key={tab.href} tab={tab} active={pathname === tab.href} onNavigate={navigate} />
         ))}
         <FloatingButton onClick={openSheet} ariaLabel="Start quest" />
         {RIGHT_TABS.map((tab) => (
-          <NavLink key={tab.href} tab={tab} active={pathname === tab.href} />
+          <NavLink key={tab.href} tab={tab} active={pathname === tab.href} onNavigate={navigate} />
         ))}
       </div>
     </nav>
