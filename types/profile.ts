@@ -1,16 +1,15 @@
-import type { User } from "./user";
-import type { VideoAsset } from "./video";
+export type ProfileThemePreference = "dark" | "light" | "system";
 
-export interface ProfileStats {
-  completedCount: number;
-  totalDurationMs: number;
-  currentStreak: number;
-  bestStreak: number;
-}
-
-export interface Profile {
-  user: User;
-  stats: ProfileStats;
-  bannerVideo: VideoAsset | null;
-  heatmap: number[];
+export interface UserProfile {
+  id: string;
+  name: string;
+  bio: string;
+  avatarDataUrl: string | null;
+  coverDataUrl: string | null;
+  isPrivate: boolean;
+  theme: ProfileThemePreference;
+  followingCount: number;
+  followerCount: number;
+  totalLikes: number;
+  totalViews: number;
 }
