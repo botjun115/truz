@@ -1,8 +1,8 @@
-import type { Profile } from "@/types/profile";
+import type { UserProfile } from "@/types/profile";
 import { notImplemented } from "@/utils/errors";
 
 export const ProfileService = {
-  getProfile(_userId: string): Promise<Profile> {
+  getProfile(_userId: string): Promise<UserProfile> {
     return notImplemented("ProfileService.getProfile");
   },
   updateDisplayName(_userId: string, _displayName: string): Promise<void> {
