@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback } from "react";
+import { RECORD_DURATION_MS } from "@/constants/config";
 import { useQuestContext } from "@/context/QuestContext";
 import type { Quest } from "@/types/quest";
-import type { VideoAsset } from "@/types/video";
+import type { RecordedVideo, VideoAsset } from "@/types/video";
 import { generateId } from "@/utils/id";
 
 export interface PublishStartQuestInput {
   questName: string;
-  startVideo: VideoAsset;
+  recorded: RecordedVideo;
 }
 
 export interface CompleteEndQuestInput {
   questId: string;
-  endVideo: VideoAsset;
+  recorded: RecordedVideo;
 }
 
 export interface UseQuestResult {
@@ -22,35 +23,48 @@ export interface UseQuestResult {
   completeEndQuest: (input: CompleteEndQuestInput) => void;
 }
 
+function toVideoAsset(recorded: RecordedVideo, kind: "start" | "end"): VideoAsset {
+  return {
+    id: recorded.id,
+    kind,
+    uri: recorded.previewUrl,
+    posterUri: null,
+    durationMs: RECORD_DURATION_MS,
+    width: null,
+    height: null,
+    createdAt: recorded.createdAt,
+  };
+}
+
 /**
  * START Questの公開(active化)と、END動画付与によるCOMPLETED化を担う。
- * (Phase 2は擬似アップロードのため、ローカルのContextにのみ反映)
+ * 録画BlobはaddQuestを通じてIndexedDBへ永続化される。
  */
 export function useQuest(): UseQuestResult {
   const { quests, addQuest, completeQuest } = useQuestContext();
 
   const publishStartQuest = useCallback(
-    ({ questName, startVideo }: PublishStartQuestInput): Quest => {
+    ({ questName, recorded }: PublishStartQuestInput): Quest => {
       const now = Date.now();
       const quest: Quest = {
         id: generateId("quest"),
         questName,
         status: "active",
-        startVideo,
+        startVideo: toVideoAsset(recorded, "start"),
         endVideo: null,
         startTimestamp: now,
         endTimestamp: null,
         durationMs: null,
       };
-      addQuest(quest);
+      addQuest(quest, recorded.blob);
       return quest;
     },
     [addQuest],
   );
 
   const completeEndQuest = useCallback(
-    ({ questId, endVideo }: CompleteEndQuestInput) => {
-      completeQuest({ questId, endVideo });
+    ({ questId, recorded }: CompleteEndQuestInput) => {
+      completeQuest({ questId, endVideo: toVideoAsset(recorded, "end") });
     },
     [completeQuest],
   );

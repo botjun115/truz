@@ -1,40 +1,45 @@
-import type { Quest } from "@/types/quest";
-
 /**
- * ACTIVEクエストのlocalStorage永続化層。
- * 動画URLはdata URLとして保存されている前提(リロード後も再生可能)。
- * Firebase接続時はこの層をサーバ同期に置き換える。
+ * ACTIVEクエストのメタデータ永続化層(localStorage)。
+ * 動画バイナリはここに入れない — 実Blobは lib/videoStorage.ts (IndexedDB) が持つ。
+ * blob: URL はセッション限りのため保存しない(リロード時に作り直す)。
  */
 
-const STORAGE_KEY = "truz.activeQuest.v1";
-
-function isVideoAssetLike(value: unknown): boolean {
-  if (value === null) return true;
-  if (typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return typeof v.id === "string" && typeof v.uri === "string";
+export interface ActiveQuestMeta {
+  questId: string;
+  questTitle: string;
+  videoId: string;
+  startedAt: number;
+  status: "active";
+  mimeType: string;
+  durationMs: number;
 }
 
-function isQuest(value: unknown): value is Quest {
+const STORAGE_KEY = "truz.activeQuestMeta.v2";
+const LEGACY_KEY = "truz.activeQuest.v1";
+
+function isActiveQuestMeta(value: unknown): value is ActiveQuestMeta {
   if (typeof value !== "object" || value === null) return false;
-  const q = value as Record<string, unknown>;
+  const m = value as Record<string, unknown>;
   return (
-    typeof q.id === "string" &&
-    typeof q.questName === "string" &&
-    q.status === "active" &&
-    typeof q.startTimestamp === "number" &&
-    isVideoAssetLike(q.startVideo)
+    typeof m.questId === "string" &&
+    typeof m.questTitle === "string" &&
+    typeof m.videoId === "string" &&
+    typeof m.startedAt === "number" &&
+    m.status === "active" &&
+    typeof m.mimeType === "string" &&
+    typeof m.durationMs === "number"
   );
 }
 
-/** 保存されたACTIVEクエストを読む(壊れていれば破棄してnull) */
-export function loadActiveQuest(): Quest | null {
+export function loadActiveQuestMeta(): ActiveQuestMeta | null {
   if (typeof window === "undefined") return null;
   try {
+    // 旧形式(data URLを含む巨大データ)が残っていれば掃除する
+    window.localStorage.removeItem(LEGACY_KEY);
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (isQuest(parsed)) return parsed;
+    if (isActiveQuestMeta(parsed)) return parsed;
     window.localStorage.removeItem(STORAGE_KEY);
     return null;
   } catch {
@@ -42,18 +47,16 @@ export function loadActiveQuest(): Quest | null {
   }
 }
 
-/** ACTIVEクエストを保存する */
-export function saveActiveQuest(quest: Quest): void {
+export function saveActiveQuestMeta(meta: ActiveQuestMeta): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(quest));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(meta));
   } catch {
-    // 容量超過などは無視(永続化はベストエフォート)
+    // メタデータは小さいので通常失敗しない。失敗してもアプリは継続。
   }
 }
 
-/** ACTIVEクエストを消す(COMPLETED化・破棄時) */
-export function clearActiveQuest(): void {
+export function clearActiveQuestMeta(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);

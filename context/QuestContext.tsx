@@ -14,29 +14,21 @@ interface QuestContextValue {
   quests: Quest[];
   activeQuest: Quest | null;
   hydrated: boolean;
-  addQuest: (quest: Quest) => void;
+  addQuest: (quest: Quest, startBlob: Blob) => void;
   completeQuest: (input: CompleteQuestInput) => void;
 }
 
 const QuestContext = createContext<QuestContextValue | null>(null);
 
-/**
- * Quest状態を保持する。
- * - ACTIVEクエストはlocalStorageで永続化(リロード/アプリ再開後も復元)
- * - COMPLETED化した瞬間に永続ACTIVEを破棄し、通常のquests配列へ移す
- * - Firebase未接続(Phase 2)
- */
 export function QuestProvider({ children }: { children: React.ReactNode }) {
   const { activeQuest, hydrated, persistActiveQuest, clearPersistedActiveQuest } =
     usePersistentActiveQuest();
 
-  // COMPLETED含む一覧(このセッションで完了したもの)
   const [completedQuests, setCompletedQuests] = useState<Quest[]>([]);
 
   const addQuest = useCallback(
-    (quest: Quest) => {
-      // 新規は必ずactive。永続化して復元対象にする
-      persistActiveQuest(quest);
+    (quest: Quest, startBlob: Blob) => {
+      persistActiveQuest(quest, startBlob);
     },
     [persistActiveQuest],
   );
@@ -58,7 +50,6 @@ export function QuestProvider({ children }: { children: React.ReactNode }) {
     [activeQuest, clearPersistedActiveQuest],
   );
 
-  // active(あれば先頭) + 完了済み
   const quests = useMemo<Quest[]>(
     () => (activeQuest ? [activeQuest, ...completedQuests] : completedQuests),
     [activeQuest, completedQuests],
