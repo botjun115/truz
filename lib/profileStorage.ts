@@ -47,11 +47,16 @@ export function loadProfile(): UserProfile {
   }
 }
 
-export function saveProfile(profile: UserProfile): void {
-  if (typeof window === "undefined") return;
+/**
+ * UserProfile全体をJSONで保存。
+ * 成功でtrue、容量超過などで失敗した場合はfalse(呼び出し側が通知できるように)。
+ */
+export function saveProfile(profile: UserProfile): boolean {
+  if (typeof window === "undefined") return false;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    return true;
   } catch {
-    // 容量超過(大きな画像)などは握りつぶす。保存はベストエフォート。
+    return false;
   }
 }

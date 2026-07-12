@@ -4,39 +4,62 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Upload } from "lucide-react";
 import { ProfileAvatar } from "@/components/Profile/ProfileAvatar";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { imageFileToDataUrl } from "@/lib/imageFile";
+import { applyTheme, useUserProfile } from "@/hooks/useUserProfile";
+import { imageFileToResizedDataUrl } from "@/lib/imageFile";
 import type { ProfileThemePreference } from "@/types/profile";
 
 const NAME_MAX = 30;
 const BIO_MAX = 120;
+const AVATAR_MAX_PX = 256;
+const COVER_MAX_PX = 720;
 const THEMES: readonly ProfileThemePreference[] = ["dark", "light", "system"];
 
-/** 設定画面: プロフィール画像/名前/自己紹介/背景/非公開/テーマ/戻る */
+/**
+ * 設定画面(一括保存方式)。
+ * すべての項目をローカルstateで一時保持し、テーマだけは即プレビュー反映。
+ * localStorageへの確定保存は「Save Changes」を押したときのみ。
+ */
 export function SettingsScreen() {
   const { profile, hydrated, update } = useUserProfile();
   const router = useRouter();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [name, setName] = useState(profile.name);
-  const [bio, setBio] = useState(profile.bio);
-  const [formLoaded, setFormLoaded] = useState(false);
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [theme, setThemeState] = useState<ProfileThemePreference>("dark");
+
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (hydrated && !formLoaded) {
-      setName(profile.name);
-      setBio(profile.bio);
-      setFormLoaded(true);
-    }
-  }, [hydrated, formLoaded, profile.name, profile.bio]);
+    if (!hydrated || loaded) return;
+    setName(profile.name);
+    setBio(profile.bio);
+    setAvatarDataUrl(profile.avatarDataUrl);
+    setCoverDataUrl(profile.coverDataUrl);
+    setIsPrivate(profile.isPrivate);
+    setThemeState(profile.theme);
+    setLoaded(true);
+  }, [hydrated, loaded, profile]);
+
+  const previewTheme = (next: ProfileThemePreference) => {
+    setThemeState(next);
+    applyTheme(next);
+  };
+
+  const goBack = () => {
+    applyTheme(profile.theme);
+    router.push("/profile");
+  };
 
   const handleAvatar = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const dataUrl = await imageFileToDataUrl(file);
-      update({ avatarDataUrl: dataUrl });
+      setAvatarDataUrl(await imageFileToResizedDataUrl(file, AVATAR_MAX_PX));
     } catch (e) {
       setError(e instanceof Error ? e.message : "画像の読み込みに失敗しました。");
     }
@@ -45,37 +68,44 @@ export function SettingsScreen() {
   const handleCover = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const dataUrl = await imageFileToDataUrl(file);
-      update({ coverDataUrl: dataUrl });
+      setCoverDataUrl(await imageFileToResizedDataUrl(file, COVER_MAX_PX));
     } catch (e) {
       setError(e instanceof Error ? e.message : "画像の読み込みに失敗しました。");
     }
   };
 
-  const saveName = () => {
-    const trimmed = name.trim();
-    if (trimmed.length === 0) {
+  const handleSave = () => {
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0) {
       setError("名前を入力してください。");
       return;
     }
+    const ok = update({
+      name: trimmedName.slice(0, NAME_MAX),
+      bio: bio.slice(0, BIO_MAX),
+      avatarDataUrl,
+      coverDataUrl,
+      isPrivate,
+      theme,
+    });
+    if (!ok) {
+      setError("保存容量が上限を超えました。画像を小さいものに変えてお試しください。");
+      return;
+    }
     setError(null);
-    update({ name: trimmed.slice(0, NAME_MAX) });
-  };
-
-  const saveBio = () => {
-    update({ bio: bio.slice(0, BIO_MAX) });
+    router.push("/profile");
   };
 
   return (
     <div className="page-shell">
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-bg/85 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] backdrop-blur-md">
-        <button type="button" onClick={() => router.push("/profile")} aria-label="Back" className="-ml-2 p-2 text-ink">
+        <button type="button" onClick={goBack} aria-label="Back" className="-ml-2 p-2 text-ink">
           <ChevronLeft size={22} />
         </button>
         <h1 className="font-display text-lg font-semibold text-ink">Settings</h1>
       </header>
 
-      <main className="flex-1 space-y-7 px-5 pb-24 pt-5">
+      <main className="flex-1 space-y-7 px-5 pb-28 pt-5">
         {error ? (
           <p className="rounded-control bg-danger/15 px-3 py-2 text-sm text-danger">{error}</p>
         ) : null}
@@ -83,7 +113,7 @@ export function SettingsScreen() {
         <section className="space-y-3">
           <SectionLabel>Profile Photo</SectionLabel>
           <div className="flex items-center gap-4">
-            <ProfileAvatar name={profile.name} avatarDataUrl={profile.avatarDataUrl} size={64} />
+            <ProfileAvatar name={name} avatarDataUrl={avatarDataUrl} size={64} />
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
@@ -109,12 +139,7 @@ export function SettingsScreen() {
             onChange={(e) => setName(e.target.value)}
             className="h-11 w-full rounded-control border border-line bg-surface-2 px-3 text-sm text-ink outline-none"
           />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-faint">{name.length}/{NAME_MAX}</span>
-            <button type="button" onClick={saveName} className="rounded-control bg-ink px-4 py-2 text-sm font-semibold text-bg">
-              Save
-            </button>
-          </div>
+          <span className="text-[11px] text-faint">{name.length}/{NAME_MAX}</span>
         </section>
 
         <section className="space-y-2">
@@ -126,12 +151,7 @@ export function SettingsScreen() {
             onChange={(e) => setBio(e.target.value)}
             className="w-full resize-none rounded-control border border-line bg-surface-2 px-3 py-2 text-sm text-ink outline-none"
           />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-faint">{bio.length}/{BIO_MAX}</span>
-            <button type="button" onClick={saveBio} className="rounded-control bg-ink px-4 py-2 text-sm font-semibold text-bg">
-              Save
-            </button>
-          </div>
+          <span className="text-[11px] text-faint">{bio.length}/{BIO_MAX}</span>
         </section>
 
         <section className="space-y-3">
@@ -139,8 +159,8 @@ export function SettingsScreen() {
           <div
             className="h-24 w-full rounded-card border border-line bg-surface-2"
             style={
-              profile.coverDataUrl
-                ? { backgroundImage: `url(${profile.coverDataUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              coverDataUrl
+                ? { backgroundImage: `url(${coverDataUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
                 : undefined
             }
           />
@@ -168,15 +188,15 @@ export function SettingsScreen() {
           <button
             type="button"
             role="switch"
-            aria-checked={profile.isPrivate}
-            onClick={() => update({ isPrivate: !profile.isPrivate })}
+            aria-checked={isPrivate}
+            onClick={() => setIsPrivate((prev) => !prev)}
             className={`relative h-7 w-12 rounded-full transition-colors ${
-              profile.isPrivate ? "bg-accent" : "bg-surface-2"
+              isPrivate ? "bg-accent" : "bg-surface-2"
             }`}
           >
             <span
               className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${
-                profile.isPrivate ? "left-6" : "left-1"
+                isPrivate ? "left-6" : "left-1"
               }`}
             />
           </button>
@@ -186,12 +206,12 @@ export function SettingsScreen() {
           <SectionLabel>Theme</SectionLabel>
           <div className="grid grid-cols-3 gap-2">
             {THEMES.map((mode) => {
-              const active = profile.theme === mode;
+              const active = theme === mode;
               return (
                 <button
                   key={mode}
                   type="button"
-                  onClick={() => update({ theme: mode })}
+                  onClick={() => previewTheme(mode)}
                   className={`rounded-control border py-2.5 text-sm font-semibold capitalize transition-colors ${
                     active ? "border-accent text-accent" : "border-line text-soft"
                   }`}
@@ -202,6 +222,14 @@ export function SettingsScreen() {
             })}
           </div>
         </section>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          className="flex h-12 w-full items-center justify-center rounded-control bg-ink text-sm font-semibold text-bg"
+        >
+          Save Changes
+        </button>
       </main>
     </div>
   );
