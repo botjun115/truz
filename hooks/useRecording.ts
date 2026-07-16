@@ -124,7 +124,6 @@ export function useRecording(): UseRecordingResult {
       };
       const videoTrack = stream.getVideoTracks()[0];
       const trackSettings = videoTrack?.getSettings();
-      const isFrontCamera = trackSettings?.facingMode === "user";
       drawFrame();
 
       const canvasStream = canvas.captureStream(FRAME_RATE);
@@ -145,7 +144,7 @@ export function useRecording(): UseRecordingResult {
          * MIMEタイプは強制せず、
          * Safari・Chrome自身に対応形式を選ばせる。
          */
-        recorder = new MediaRecorder(canvasStream);
+        recorder = new MediaRecorder(stream);
 
         console.log(
           "[TRUZ] Browser selected MediaRecorder mimeType:",

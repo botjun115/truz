@@ -93,6 +93,7 @@ function getInitial(name: string): string {
   return trimmed.charAt(0).toUpperCase();
 }
 
+
 function VideoPanel({
   uri,
   label,
@@ -100,19 +101,47 @@ function VideoPanel({
   uri: string | null;
   label: "START" | "END";
 }) {
+  console.log("[TRUZ] VideoPanel URI:", uri);
+
   return (
     <div className="relative aspect-[9/16] min-w-0 overflow-hidden rounded-[24px] border border-white/10 bg-[#1b1b1b]">
       {uri ? (
         <video
+          key={uri}
           src={uri}
+          controls
           playsInline
-          preload="metadata"
-          className="h-full w-full object-cover"
+          preload="auto"
+          className="h-full w-full bg-black object-contain"
+          onLoadedMetadata={(event) => {
+            const video = event.currentTarget;
+
+            console.log("[TRUZ] Video loaded:", {
+              uri,
+              duration: video.duration,
+              width: video.videoWidth,
+              height: video.videoHeight,
+              readyState: video.readyState,
+            });
+          }}
+          onError={(event) => {
+            const video = event.currentTarget;
+
+            console.error("[TRUZ] Video error:", {
+              uri,
+              errorCode: video.error?.code,
+              errorMessage: video.error?.message,
+              readyState: video.readyState,
+              networkState: video.networkState,
+            });
+          }}
           onClick={(event) => {
             const video = event.currentTarget;
 
             if (video.paused) {
-              void video.play();
+              void video.play().catch((playError) => {
+                console.error("[TRUZ] Video play failed:", playError);
+              });
             } else {
               video.pause();
             }
@@ -130,7 +159,6 @@ function VideoPanel({
     </div>
   );
 }
-
 export function FeedCard({
   item,
   footer,
