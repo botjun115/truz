@@ -14,7 +14,7 @@ interface QuestContextValue {
   quests: Quest[];
   activeQuest: Quest | null;
   hydrated: boolean;
-  addQuest: (quest: Quest, startBlob: Blob) => void;
+  addQuest: (quest: Quest) => void;
   completeQuest: (input: CompleteQuestInput) => void;
 }
 
@@ -27,8 +27,8 @@ export function QuestProvider({ children }: { children: React.ReactNode }) {
   const [completedQuests, setCompletedQuests] = useState<Quest[]>([]);
 
   const addQuest = useCallback(
-    (quest: Quest, startBlob: Blob) => {
-      persistActiveQuest(quest, startBlob);
+    (quest: Quest) => {
+      persistActiveQuest(quest);
     },
     [persistActiveQuest],
   );
@@ -36,7 +36,9 @@ export function QuestProvider({ children }: { children: React.ReactNode }) {
   const completeQuest = useCallback(
     ({ questId, endVideo }: CompleteQuestInput) => {
       if (!activeQuest || activeQuest.id !== questId) return;
+
       const endTimestamp = Date.now();
+
       const completed: Quest = {
         ...activeQuest,
         status: "completed",
@@ -44,6 +46,7 @@ export function QuestProvider({ children }: { children: React.ReactNode }) {
         endTimestamp,
         durationMs: Math.max(0, endTimestamp - activeQuest.startTimestamp),
       };
+
       setCompletedQuests((current) => [completed, ...current]);
       clearPersistedActiveQuest();
     },
@@ -65,8 +68,10 @@ export function QuestProvider({ children }: { children: React.ReactNode }) {
 
 export function useQuestContext(): QuestContextValue {
   const context = useContext(QuestContext);
+
   if (!context) {
     throw new Error("useQuestContext must be used within a QuestProvider.");
   }
+
   return context;
 }

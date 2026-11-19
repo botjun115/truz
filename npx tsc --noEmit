@@ -1,0 +1,61 @@
+warning: in the working copy of 'context/QuestContext.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/context/QuestContext.tsx b/context/QuestContext.tsx[m
+[1mindex bb31a23..618ecd2 100644[m
+[1m--- a/context/QuestContext.tsx[m
+[1m+++ b/context/QuestContext.tsx[m
+[36m@@ -1,4 +1,3 @@[m
+[31m-"use client";[m
+ [m
+ import { createContext, useCallback, useContext, useMemo, useState } from "react";[m
+ import { usePersistentActiveQuest } from "@/hooks/usePersistentActiveQuest";[m
+[36m@@ -14,7 +13,7 @@[m [minterface QuestContextValue {[m
+   quests: Quest[];[m
+   activeQuest: Quest | null;[m
+   hydrated: boolean;[m
+[31m-  addQuest: (quest: Quest, startBlob: Blob) => void;[m
+[32m+[m[32m  addQuest: (quest: Quest) => void;[m
+   completeQuest: (input: CompleteQuestInput) => void;[m
+ }[m
+ [m
+[36m@@ -27,8 +26,8 @@[m [mexport function QuestProvider({ children }: { children: React.ReactNode }) {[m
+   const [completedQuests, setCompletedQuests] = useState<Quest[]>([]);[m
+ [m
+   const addQuest = useCallback([m
+[31m-    (quest: Quest, startBlob: Blob) => {[m
+[31m-      persistActiveQuest(quest, startBlob);[m
+[32m+[m[32m    (quest: Quest) => {[m
+[32m+[m[32m      persistActiveQuest(quest);[m
+     },[m
+     [persistActiveQuest],[m
+   );[m
+[36m@@ -36,7 +35,9 @@[m [mexport function QuestProvider({ children }: { children: React.ReactNode }) {[m
+   const completeQuest = useCallback([m
+     ({ questId, endVideo }: CompleteQuestInput) => {[m
+       if (!activeQuest || activeQuest.id !== questId) return;[m
+[32m+[m
+       const endTimestamp = Date.now();[m
+[32m+[m
+       const completed: Quest = {[m
+         ...activeQuest,[m
+         status: "completed",[m
+[36m@@ -44,6 +45,7 @@[m [mexport function QuestProvider({ children }: { children: React.ReactNode }) {[m
+         endTimestamp,[m
+         durationMs: Math.max(0, endTimestamp - activeQuest.startTimestamp),[m
+       };[m
+[32m+[m
+       setCompletedQuests((current) => [completed, ...current]);[m
+       clearPersistedActiveQuest();[m
+     },[m
+[36m@@ -65,8 +67,10 @@[m [mexport function QuestProvider({ children }: { children: React.ReactNode }) {[m
+ [m
+ export function useQuestContext(): QuestContextValue {[m
+   const context = useContext(QuestContext);[m
+[32m+[m
+   if (!context) {[m
+     throw new Error("useQuestContext must be used within a QuestProvider.");[m
+   }[m
+[32m+[m
+   return context;[m
+[31m-}[m
+\ No newline at end of file[m
+[32m+[m[32m}[m

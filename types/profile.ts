@@ -8,8 +8,4 @@ export interface UserProfile {
   coverDataUrl: string | null;
   isPrivate: boolean;
   theme: ProfileThemePreference;
-  followingCount: number;
-  followerCount: number;
-  totalLikes: number;
-  totalViews: number;
 }

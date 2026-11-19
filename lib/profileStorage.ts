@@ -10,10 +10,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   coverDataUrl: null,
   isPrivate: false,
   theme: "dark",
-  followingCount: 20,
-  followerCount: 120,
-  totalLikes: 500,
-  totalViews: 1200,
+
 };
 
 function isUserProfile(value: unknown): value is UserProfile {
@@ -26,11 +23,8 @@ function isUserProfile(value: unknown): value is UserProfile {
     (p.avatarDataUrl === null || typeof p.avatarDataUrl === "string") &&
     (p.coverDataUrl === null || typeof p.coverDataUrl === "string") &&
     typeof p.isPrivate === "boolean" &&
-    (p.theme === "dark" || p.theme === "light" || p.theme === "system") &&
-    typeof p.followingCount === "number" &&
-    typeof p.followerCount === "number" &&
-    typeof p.totalLikes === "number" &&
-    typeof p.totalViews === "number"
+    (p.theme === "dark" || p.theme === "light" || p.theme === "system") 
+    
   );
 }
 

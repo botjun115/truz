@@ -1,64 +1,78 @@
 "use client";
 
-import { useState } from "react"; // ← 追加
+import { useState } from "react";
 import { QuestBottomSheet } from "@/components/Create/QuestBottomSheet";
 import { CameraLauncher } from "@/components/Create/CameraLauncher";
 import { ReviewScreen } from "@/components/Create/ReviewScreen";
-import { ShareSuccessOverlay } from "@/components/Share/ShareSuccessOverlay"; // ← 追加
+import { ShareSuccessOverlay } from "@/components/Share/ShareSuccessOverlay";
 import { useCreateQuest } from "@/context/CreateQuestContext";
 import { useQuest } from "@/hooks/useQuest";
+import { buildVideoStoragePath, uploadVideo } from "@/lib/firebase/upload";
+import { generateId } from "@/utils/id";
 import type { VideoAsset } from "@/types/video";
 
 /**
  * START/ENDフローのオーバーレイ制御。
- * step に応じて Bottom Sheet / Camera / Review をHomeの上に重ねる。
- * mode が "start" なら新規active化、"end" なら既存questをCOMPLETED化する。
+ * 投稿時に動画をFirebase Storageへアップロードし、blob:URLを永続URL(https)へ差し替える。
+ * これによりフィード/リロード後も黒画面にならない。
  */
 export function CreateFlow() {
   const flow = useCreateQuest();
   const { publishStartQuest, completeEndQuest } = useQuest();
 
-  // ↓ 追加: 投稿成功時だけShareオーバーレイを出すためのローカル状態(Context非依存)
   const [shareOpen, setShareOpen] = useState(false);
   const [sharedQuestName, setSharedQuestName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleRecorded = (video: VideoAsset) => {
-    console.log("[TRUZ] CreateFlow.handleRecorded uri length:", video.uri?.length ?? "undefined");
     flow.completeRecording(video);
   };
 
-  const handlePost = () => {
-    if (!flow.recordedVideo) {
-      console.error("[TRUZ] handlePost: recordedVideo is NULL");
-      return;
-    }
+  /** blob:URLから実データを取得し、Storageへアップして永続URLを持つVideoAssetを返す */
+  const uploadAndGetVideoAsset = async (
+    video: VideoAsset,
+    questId: string,
+    kind: "start" | "end",
+  ): Promise<VideoAsset> => {
+    const response = await fetch(video.uri);
+    const blob = await response.blob();
+    const contentType = blob.type || "video/webm";
+    const path = buildVideoStoragePath("user_me", questId, kind);
+    const { downloadUrl } = await uploadVideo({ file: blob, path, contentType });
+    return { ...video, uri: downloadUrl };
+  };
+
+  const handlePost = async () => {
+    if (!flow.recordedVideo) return;
     const video = flow.recordedVideo;
-    console.log(
-      "[TRUZ] handlePost posting, mode:",
-      flow.mode,
-      "uri length:",
-      video.uri?.length ?? "undefined",
-    );
+    const postedQuestName = flow.questName.trim();
 
-    const postedQuestName = flow.questName.trim(); // ← 追加(投稿名を控える)
+    setUploading(true);
+    setUploadError(null);
 
-    if (flow.mode === "start") {
-      const questName = flow.questName.trim();
-      window.setTimeout(() => {
-        publishStartQuest({ questName, startVideo: video });
-        console.log("[TRUZ] publishStartQuest done, startVideo uri length:", video.uri?.length);
+    try {
+      if (flow.mode === "start") {
+        const questId = generateId("quest");
+        const uploaded = await uploadAndGetVideoAsset(video, questId, "start");
+        publishStartQuest({ questName: postedQuestName, startVideo: uploaded });
         flow.reset();
-        setSharedQuestName(postedQuestName); // ← 追加
-        setShareOpen(true); // ← 追加(投稿成功後にオーバーレイ表示)
-      }, 1200);
-    } else if (flow.mode === "end" && flow.endingQuestId) {
-      const questId = flow.endingQuestId;
-      window.setTimeout(() => {
-        completeEndQuest({ questId, endVideo: video });
+        setSharedQuestName(postedQuestName);
+        setShareOpen(true);
+      } else if (flow.mode === "end" && flow.endingQuestId) {
+        const questId = flow.endingQuestId;
+        const uploaded = await uploadAndGetVideoAsset(video, questId, "end");
+        completeEndQuest({ questId, endVideo: uploaded });
         flow.reset();
-        setSharedQuestName(postedQuestName); // ← 追加
-        setShareOpen(true); // ← 追加
-      }, 1200);
+        setSharedQuestName(postedQuestName);
+        setShareOpen(true);
+      }
+    } catch (error) {
+      console.error("[TRUZ] upload failed:", error);
+      const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      setUploadError(`アップロード失敗: ${detail}`);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -84,10 +98,19 @@ export function CreateFlow() {
             onBack={flow.backToCamera}
             onPost={handlePost}
           />
+          {uploading ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
+              <p className="font-mono text-sm tracking-wider text-white">Uploading…</p>
+            </div>
+          ) : null}
+          {uploadError ? (
+            <div className="absolute inset-x-4 bottom-24 z-50 rounded-control bg-danger/90 px-4 py-3 text-center text-xs font-semibold text-white">
+              {uploadError}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {/* ↓ 追加: 投稿成功直後だけ表示されるShareオーバーレイ */}
       <ShareSuccessOverlay
         open={shareOpen}
         questName={sharedQuestName}

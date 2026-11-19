@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Heart, MessageCircle } from "lucide-react";
 import type { FeedItem } from "@/types/feed";
 
@@ -92,7 +92,48 @@ function getInitial(name: string): string {
 
   return trimmed.charAt(0).toUpperCase();
 }
+const STORAGE_KEY = "truz-feed-interactions-v1";
 
+interface SavedInteractions {
+  liked: boolean;
+  comments: LocalComment[];
+}
+
+function loadInteractions(postId: string): SavedInteractions {
+  try {
+    const saved = localStorage.getItem(`${STORAGE_KEY}:${postId}`);
+
+    if (!saved) {
+      return { liked: false, comments: [] };
+    }
+
+    const parsed: unknown = JSON.parse(saved);
+
+    if (typeof parsed !== "object" || parsed === null) {
+      return { liked: false, comments: [] };
+    }
+
+    const data = parsed as Record<string, unknown>;
+
+    const comments = Array.isArray(data.comments)
+      ? data.comments.filter(
+          (comment): comment is LocalComment =>
+            typeof comment === "object" &&
+            comment !== null &&
+            typeof (comment as LocalComment).id === "string" &&
+            typeof (comment as LocalComment).author === "string" &&
+            typeof (comment as LocalComment).text === "string",
+        )
+      : [];
+
+    return {
+      liked: data.liked === true,
+      comments,
+    };
+  } catch {
+    return { liked: false, comments: [] };
+  }
+}
 
 function VideoPanel({
   uri,
@@ -256,15 +297,7 @@ export function FeedCard({
     "after",
   ]);
 
-  const initialLikes = getNumber(
-    data,
-    [
-      "likes",
-      "likeCount",
-      "totalLikes",
-    ],
-    0,
-  );
+ 
 
   const initialCommentCount = getNumber(
     data,
@@ -277,25 +310,42 @@ export function FeedCard({
   );
 
   const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(initialLikes);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<LocalComment[]>([]);
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const saved = loadInteractions(item.id);
+  
+    setLiked(saved.liked);
+    setComments(saved.comments);
+    setHydratedFor(item.id);
+  }, [item.id]);
+  
+  useEffect(() => {
+    if (hydratedFor !== item.id) return;
+  
+    const saved: SavedInteractions = {
+      liked,
+      comments,
+    };
+  
+    try {
+      localStorage.setItem(
+        `${STORAGE_KEY}:${item.id}`,
+        JSON.stringify(saved),
+      );
+    } catch (error) {
+      console.error("[TRUZ] Failed to save interactions:", error);
+    }
+  }, [item.id, liked, comments, hydratedFor]);
 
   const displayedCommentCount =
     initialCommentCount + comments.length;
-
-  const toggleLike = () => {
-    setLiked((current) => {
-      setLikes((count) =>
-        current
-          ? Math.max(0, count - 1)
-          : count + 1,
-      );
-
-      return !current;
-    });
-  };
+const toggleLike = () => {
+  setLiked((current) => !current);
+};
 
   const submitComment = () => {
     const trimmed = commentText.trim();
@@ -376,9 +426,6 @@ export function FeedCard({
             }
           />
 
-          <span className="text-[17px] font-semibold">
-            {likes}
-          </span>
         </button>
 
         <button

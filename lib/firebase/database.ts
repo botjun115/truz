@@ -1,11 +1,7 @@
-import { getFirestore, type Firestore } from "firebase/firestore";
-import { getFirebaseApp } from "./firebase";
 
-let db: Firestore | null = null;
+import { db as firestoreDb } from "./firebase";
+import type { Firestore } from "firebase/firestore";
 
 export function getDb(): Firestore {
-  if (!db) {
-    db = getFirestore(getFirebaseApp());
-  }
-  return db;
+  return firestoreDb;
 }

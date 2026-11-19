@@ -1,11 +1,7 @@
-import { getStorage, type FirebaseStorage } from "firebase/storage";
-import { getFirebaseApp } from "./firebase";
 
-let storage: FirebaseStorage | null = null;
+import { storage as firebaseStorage } from "./firebase";
+import type { FirebaseStorage } from "firebase/storage";
 
 export function getStorageClient(): FirebaseStorage {
-  if (!storage) {
-    storage = getStorage(getFirebaseApp());
-  }
-  return storage;
+  return firebaseStorage;
 }

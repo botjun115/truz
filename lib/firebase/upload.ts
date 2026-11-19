@@ -1,5 +1,10 @@
+import {
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
+import { storage } from "@/lib/firebase";
 import type { VideoKind } from "@/types/video";
-import { notImplemented } from "@/utils/errors";
 
 export interface UploadVideoInput {
   file: Blob;
@@ -14,10 +19,16 @@ export interface UploadResult {
 
 /** Storage上の動画パスを組み立てる */
 export function buildVideoStoragePath(userId: string, questId: string, kind: VideoKind): string {
-  return `videos/${userId}/${questId}/${kind}.mp4`;
+  return `videos/${userId}/${questId}/${kind}.webm`;
 }
 
-/** 動画アップロード本体はPhase 2で実装する */
-export function uploadVideo(_input: UploadVideoInput): Promise<UploadResult> {
-  return notImplemented("lib/firebase/upload.uploadVideo");
+/**
+ * 動画BlobをFirebase Storageにアップロードし、公開URLを返す。
+ * このURLはリロード後も有効なので、フィードで再生してもblack画面にならない。
+ */
+export async function uploadVideo(input: UploadVideoInput): Promise<UploadResult> {
+  const storageRef = ref(storage, input.path);
+  await uploadBytes(storageRef, input.file, { contentType: input.contentType });
+  const downloadUrl = await getDownloadURL(storageRef);
+  return { downloadUrl, path: input.path };
 }

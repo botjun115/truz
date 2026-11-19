@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ProfileHeader } from "@/components/Profile/ProfileHeader";
 import { ProfilePostGrid } from "@/components/Profile/ProfilePostGrid";
-import { ProfileStats } from "@/components/Profile/ProfileStats";
 import { SponsoredSlot } from "@/components/Profile/SponsoredSlot";
 import { NavigationBar } from "@/components/Navigation/NavigationBar";
 import { useQuestContext } from "@/context/QuestContext";
@@ -30,14 +29,7 @@ export function ProfileScreen() {
       <main className="flex-1 pb-24">
         <ProfileHeader profile={profile} isOwnProfile />
 
-        <div className="mt-5 px-5">
-          <ProfileStats
-            followingCount={profile.followingCount}
-            followerCount={profile.followerCount}
-            totalLikes={profile.totalLikes}
-            totalViews={profile.totalViews}
-          />
-        </div>
+     
 
         <div className="mt-5 px-5">
           <SponsoredSlot />
